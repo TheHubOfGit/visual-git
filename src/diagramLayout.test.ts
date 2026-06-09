@@ -88,4 +88,15 @@ describe("layoutCommitDiagram", () => {
     expect(diagram.width).toBeGreaterThan(600);
     expect(diagram.height).toBeGreaterThan(500);
   });
+
+  it("creates named vertical lanes from branch refs and keeps merges on main", () => {
+    const diagram = layoutCommitDiagram(commits);
+    const mergeTwo = diagram.nodes.find((node) => node.hash === "merge-two");
+    const featureWork = diagram.nodes.find((node) => node.hash === "feature-work");
+
+    expect(diagram.lanes.map((lane) => lane.name)).toEqual(["main", "feature/example"]);
+    expect(mergeTwo?.laneName).toBe("main");
+    expect(featureWork?.laneName).toBe("feature/example");
+    expect(featureWork?.column).toBe(diagram.lanes.find((lane) => lane.name === "feature/example")?.column);
+  });
 });

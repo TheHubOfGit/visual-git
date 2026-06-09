@@ -352,6 +352,19 @@ button {
   overflow: visible;
 }
 
+.diagram-lane rect {
+  fill: rgba(244, 245, 241, 0.7);
+  stroke: rgba(217, 221, 211, 0.88);
+  stroke-dasharray: 5 5;
+}
+
+.diagram-lane text {
+  fill: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .diagram-edge {
   fill: none;
   stroke: #778985;

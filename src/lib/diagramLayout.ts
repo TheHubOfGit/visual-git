@@ -1,4 +1,4 @@
-import type { GitCommit, GitDiagram, GitDiagramEdge, GitDiagramNode } from "./types";
+import type { GitCommit, GitDiagram, GitDiagramEdge, GitDiagramLane, GitDiagramNode } from "./types";
 
 const nodeWidth = 240;
 const nodeHeight = 86;
@@ -6,40 +6,75 @@ const columnGap = 86;
 const rowGap = 42;
 const paddingX = 34;
 const paddingY = 28;
+const laneHeaderHeight = 44;
 
-function firstAvailableColumn(occupied: Set<number>): number {
-  let column = 0;
-  while (occupied.has(column)) column += 1;
-  return column;
+function branchRefs(commit: GitCommit): string[] {
+  return commit.refs
+    .map((ref) => {
+      if (ref.startsWith("tag:")) return "";
+      if (ref.startsWith("HEAD -> ")) return ref.slice("HEAD -> ".length);
+      return ref;
+    })
+    .map((ref) => ref.trim())
+    .filter(Boolean);
+}
+
+function directLaneName(commit: GitCommit): string | undefined {
+  const branches = branchRefs(commit);
+  if (branches.includes("main")) return "main";
+  const namedBranch = branches.find((branch) => branch !== "main");
+  if (namedBranch) return namedBranch;
+  if (commit.parents.length > 1 || commit.subject.startsWith("Merge ")) return "main";
+  return undefined;
 }
 
 export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
-  const activeColumns = new Map<string, number>();
-  const usedColumnsByRow = new Map<number, Set<number>>();
+  const commitByHash = new Map(commits.map((commit) => [commit.hash, commit]));
+  const activeLaneByHash = new Map<string, string>();
+  const lanes: GitDiagramLane[] = [];
+  const laneByName = new Map<string, GitDiagramLane>();
   const nodeByHash = new Map<string, GitDiagramNode>();
 
+  function ensureLane(name: string): GitDiagramLane {
+    const existing = laneByName.get(name);
+    if (existing) return existing;
+    const column = lanes.length;
+    const lane = {
+      name,
+      column,
+      x: paddingX + column * (nodeWidth + columnGap) - (column === 0 ? 0 : columnGap / 2),
+      width: nodeWidth + (column === 0 ? columnGap / 2 : columnGap)
+    };
+    lanes.push(lane);
+    laneByName.set(name, lane);
+    return lane;
+  }
+
+  ensureLane("main");
+
   const nodes = commits.map((commit, row) => {
-    const occupied = usedColumnsByRow.get(row) ?? new Set<number>();
-    usedColumnsByRow.set(row, occupied);
-    const column = activeColumns.get(commit.hash) ?? firstAvailableColumn(occupied);
-    occupied.add(column);
-    activeColumns.delete(commit.hash);
+    const laneName = directLaneName(commit) ?? activeLaneByHash.get(commit.hash) ?? "main";
+    const lane = ensureLane(laneName);
+    activeLaneByHash.delete(commit.hash);
 
     commit.parents.forEach((parent, parentIndex) => {
-      if (activeColumns.has(parent)) return;
-      if (parentIndex === 0) {
-        activeColumns.set(parent, column);
+      if (activeLaneByHash.has(parent)) return;
+      const parentCommit = commitByHash.get(parent);
+      const parentDirectLane = parentCommit ? directLaneName(parentCommit) : undefined;
+      if (parentDirectLane) {
+        activeLaneByHash.set(parent, parentDirectLane);
         return;
       }
-      activeColumns.set(parent, firstAvailableColumn(new Set([...occupied, ...activeColumns.values()])));
+      activeLaneByHash.set(parent, parentIndex === 0 ? laneName : `parent ${parentIndex + 1}`);
     });
 
     const node = {
       ...commit,
       row,
-      column,
-      x: paddingX + column * (nodeWidth + columnGap),
-      y: paddingY + row * (nodeHeight + rowGap)
+      column: lane.column,
+      laneName,
+      x: paddingX + lane.column * (nodeWidth + columnGap),
+      y: paddingY + laneHeaderHeight + row * (nodeHeight + rowGap)
     };
     nodeByHash.set(commit.hash, node);
     return node;
@@ -64,10 +99,11 @@ export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
 
   const maxColumn = Math.max(0, ...nodes.map((node) => node.column));
   return {
+    lanes,
     nodes,
     edges,
     width: paddingX * 2 + (maxColumn + 1) * nodeWidth + maxColumn * columnGap,
-    height: paddingY * 2 + nodes.length * nodeHeight + Math.max(0, nodes.length - 1) * rowGap
+    height: paddingY * 2 + laneHeaderHeight + nodes.length * nodeHeight + Math.max(0, nodes.length - 1) * rowGap
   };
 }
 
