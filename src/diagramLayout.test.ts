@@ -64,16 +64,27 @@ describe("layoutCommitDiagram", () => {
   it("places each commit into a node and keeps parent links as diagram edges", () => {
     const diagram = layoutCommitDiagram(commits);
 
-    expect(diagram.nodes.map((node) => node.hash)).toEqual(["merge-two", "main-work", "feature-work", "merge-one", "root"]);
+    expect(diagram.nodes.map((node) => node.hash)).toEqual(["root", "merge-one", "feature-work", "main-work", "merge-two"]);
     expect(diagram.nodes).toHaveLength(5);
     expect(diagram.edges).toHaveLength(5);
     expect(diagram.edges).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ from: "merge-two", to: "main-work", merge: true }),
-        expect.objectContaining({ from: "merge-two", to: "feature-work", merge: true }),
-        expect.objectContaining({ from: "feature-work", to: "merge-one", merge: false })
+        expect.objectContaining({ from: "main-work", to: "merge-two", merge: true }),
+        expect.objectContaining({ from: "feature-work", to: "merge-two", merge: true }),
+        expect.objectContaining({ from: "merge-one", to: "feature-work", merge: false })
       ])
     );
+  });
+
+  it("positions parent commits above their child commits", () => {
+    const diagram = layoutCommitDiagram(commits);
+    const root = diagram.nodes.find((node) => node.hash === "root");
+    const mergeOne = diagram.nodes.find((node) => node.hash === "merge-one");
+    const mergeTwo = diagram.nodes.find((node) => node.hash === "merge-two");
+
+    expect(root?.y).toBeLessThan(mergeOne?.y ?? 0);
+    expect(mergeOne?.y).toBeLessThan(mergeTwo?.y ?? 0);
+    expect(diagram.edges.every((edge) => edge.fromY < edge.toY)).toBe(true);
   });
 
   it("moves alternate merge parents into another column like a node diagram branch", () => {

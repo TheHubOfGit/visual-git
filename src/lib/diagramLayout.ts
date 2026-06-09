@@ -88,6 +88,14 @@ export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
   const lanes: GitDiagramLane[] = [];
   const laneByName = new Map<string, GitDiagramLane>();
   const nodeByHash = new Map<string, GitDiagramNode>();
+  const commitsByTime = commits
+    .map((commit, originalIndex) => ({ commit, originalIndex }))
+    .sort((left, right) => {
+      const timeDiff = commitTime(left.commit) - commitTime(right.commit);
+      if (timeDiff !== 0) return timeDiff;
+      return right.originalIndex - left.originalIndex;
+    })
+    .map(({ commit }) => commit);
 
   function ensureLane(name: string): GitDiagramLane {
     const existing = laneByName.get(name);
@@ -106,7 +114,7 @@ export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
 
   laneNames.forEach(ensureLane);
 
-  const nodes = commits.map((commit, row) => {
+  const nodes = commitsByTime.map((commit, row) => {
     const laneName = laneNameByHash.get(commit.hash) ?? "main";
     const lane = ensureLane(laneName);
 
@@ -128,12 +136,12 @@ export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
       const parent = nodeByHash.get(parentHash);
       if (!parent) continue;
       edges.push({
-        from: node.hash,
-        to: parent.hash,
-        fromX: node.x + nodeWidth / 2,
-        fromY: node.y + nodeHeight,
-        toX: parent.x + nodeWidth / 2,
-        toY: parent.y,
+        from: parent.hash,
+        to: node.hash,
+        fromX: parent.x + nodeWidth / 2,
+        fromY: parent.y + nodeHeight,
+        toX: node.x + nodeWidth / 2,
+        toY: node.y,
         merge: node.parents.length > 1
       });
     }
