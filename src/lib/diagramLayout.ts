@@ -8,6 +8,11 @@ const paddingX = 34;
 const paddingY = 28;
 const laneHeaderHeight = 44;
 
+type LaneStats = {
+  name: string;
+  earliestTime: number;
+};
+
 function branchRefs(commit: GitCommit): string[] {
   return commit.refs
     .map((ref) => {
@@ -28,9 +33,67 @@ function directLaneName(commit: GitCommit): string | undefined {
   return undefined;
 }
 
-export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
+function laneGroupRank(name: string): number {
+  if (name === "main") return 0;
+  if (name.startsWith("feature/")) return 1;
+  if (name.startsWith("hotfix/")) return 2;
+  if (name.startsWith("release/")) return 3;
+  if (name.startsWith("experiment/")) return 4;
+  return 5;
+}
+
+function commitTime(commit: GitCommit): number {
+  const parsed = Date.parse(commit.date);
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+}
+
+function inferLaneAssignments(commits: GitCommit[]) {
   const commitByHash = new Map(commits.map((commit) => [commit.hash, commit]));
   const activeLaneByHash = new Map<string, string>();
+  const laneNameByHash = new Map<string, string>();
+  const laneStats = new Map<string, LaneStats>();
+
+  function recordLane(name: string, commit: GitCommit) {
+    const earliestTime = commitTime(commit);
+    const existing = laneStats.get(name);
+    if (!existing) {
+      laneStats.set(name, { name, earliestTime });
+      return;
+    }
+    existing.earliestTime = Math.min(existing.earliestTime, earliestTime);
+  }
+
+  laneStats.set("main", { name: "main", earliestTime: Number.MAX_SAFE_INTEGER });
+
+  for (const commit of commits) {
+    const laneName = directLaneName(commit) ?? activeLaneByHash.get(commit.hash) ?? "main";
+    laneNameByHash.set(commit.hash, laneName);
+    recordLane(laneName, commit);
+    activeLaneByHash.delete(commit.hash);
+
+    commit.parents.forEach((parent, parentIndex) => {
+      if (activeLaneByHash.has(parent)) return;
+      const parentCommit = commitByHash.get(parent);
+      const parentDirectLane = parentCommit ? directLaneName(parentCommit) : undefined;
+      activeLaneByHash.set(parent, parentDirectLane ?? (parentIndex === 0 ? laneName : `parent ${parentIndex + 1}`));
+    });
+  }
+
+  const laneNames = Array.from(laneStats.values())
+    .sort((left, right) => {
+      const groupDiff = laneGroupRank(left.name) - laneGroupRank(right.name);
+      if (groupDiff !== 0) return groupDiff;
+      const timeDiff = left.earliestTime - right.earliestTime;
+      if (timeDiff !== 0) return timeDiff;
+      return left.name.localeCompare(right.name);
+    })
+    .map((lane) => lane.name);
+
+  return { laneNameByHash, laneNames };
+}
+
+export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
+  const { laneNameByHash, laneNames } = inferLaneAssignments(commits);
   const lanes: GitDiagramLane[] = [];
   const laneByName = new Map<string, GitDiagramLane>();
   const nodeByHash = new Map<string, GitDiagramNode>();
@@ -50,23 +113,11 @@ export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
     return lane;
   }
 
-  ensureLane("main");
+  laneNames.forEach(ensureLane);
 
   const nodes = commits.map((commit, row) => {
-    const laneName = directLaneName(commit) ?? activeLaneByHash.get(commit.hash) ?? "main";
+    const laneName = laneNameByHash.get(commit.hash) ?? "main";
     const lane = ensureLane(laneName);
-    activeLaneByHash.delete(commit.hash);
-
-    commit.parents.forEach((parent, parentIndex) => {
-      if (activeLaneByHash.has(parent)) return;
-      const parentCommit = commitByHash.get(parent);
-      const parentDirectLane = parentCommit ? directLaneName(parentCommit) : undefined;
-      if (parentDirectLane) {
-        activeLaneByHash.set(parent, parentDirectLane);
-        return;
-      }
-      activeLaneByHash.set(parent, parentIndex === 0 ? laneName : `parent ${parentIndex + 1}`);
-    });
 
     const node = {
       ...commit,

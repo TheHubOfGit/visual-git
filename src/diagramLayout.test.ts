@@ -99,4 +99,97 @@ describe("layoutCommitDiagram", () => {
     expect(featureWork?.laneName).toBe("feature/example");
     expect(featureWork?.column).toBe(diagram.lanes.find((lane) => lane.name === "feature/example")?.column);
   });
+
+  it("orders lanes by type and then oldest visible commit date within each type", () => {
+    const branchOrderCommits: GitCommit[] = [
+      {
+        hash: "head",
+        shortHash: "head",
+        parents: ["root"],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-06-09T12:00:00-04:00",
+        refs: ["HEAD -> main"],
+        subject: "Main head",
+        body: ""
+      },
+      {
+        hash: "feature-new",
+        shortHash: "feature",
+        parents: ["root"],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-06-08T12:00:00-04:00",
+        refs: ["feature/newer"],
+        subject: "Newer feature",
+        body: ""
+      },
+      {
+        hash: "hotfix",
+        shortHash: "hotfix",
+        parents: ["root"],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-06-05T12:00:00-04:00",
+        refs: ["hotfix/patch"],
+        subject: "Hotfix",
+        body: ""
+      },
+      {
+        hash: "feature-old",
+        shortHash: "feature",
+        parents: ["root"],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-06-01T12:00:00-04:00",
+        refs: ["feature/older"],
+        subject: "Older feature",
+        body: ""
+      },
+      {
+        hash: "release",
+        shortHash: "release",
+        parents: ["root"],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-06-03T12:00:00-04:00",
+        refs: ["release/candidate"],
+        subject: "Release",
+        body: ""
+      },
+      {
+        hash: "experiment",
+        shortHash: "experim",
+        parents: ["root"],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-06-02T12:00:00-04:00",
+        refs: ["experiment/spike"],
+        subject: "Experiment",
+        body: ""
+      },
+      {
+        hash: "root",
+        shortHash: "root",
+        parents: [],
+        authorName: "Visual Git Demo",
+        authorEmail: "demo@example.local",
+        date: "2026-05-30T12:00:00-04:00",
+        refs: [],
+        subject: "Root",
+        body: ""
+      }
+    ];
+
+    const diagram = layoutCommitDiagram(branchOrderCommits);
+
+    expect(diagram.lanes.map((lane) => lane.name)).toEqual([
+      "main",
+      "feature/older",
+      "feature/newer",
+      "hotfix/patch",
+      "release/candidate",
+      "experiment/spike"
+    ]);
+  });
 });
