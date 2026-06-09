@@ -32,6 +32,14 @@ export function CommitGraph({ graph, selectedHash, onSelect }: CommitGraphProps)
               <path d="M 0 0 L 8 4 L 0 8 z" className="arrow-head merge" />
             </marker>
           </defs>
+          {diagram.lanes.map((lane) => (
+            <g key={lane.name} className="diagram-lane">
+              <rect x={lane.x} y="10" width={lane.width} height={diagram.height - 20} rx="8" />
+              <text x={lane.x + 14} y="36">
+                {lane.name}
+              </text>
+            </g>
+          ))}
           {diagram.edges.map((edge) => (
             <path
               key={`${edge.from}-${edge.to}`}

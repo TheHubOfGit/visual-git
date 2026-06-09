@@ -33,8 +33,16 @@ export type GitGraph = {
 export type GitDiagramNode = GitCommit & {
   row: number;
   column: number;
+  laneName: string;
   x: number;
   y: number;
+};
+
+export type GitDiagramLane = {
+  name: string;
+  column: number;
+  x: number;
+  width: number;
 };
 
 export type GitDiagramEdge = {
@@ -48,6 +56,7 @@ export type GitDiagramEdge = {
 };
 
 export type GitDiagram = {
+  lanes: GitDiagramLane[];
   nodes: GitDiagramNode[];
   edges: GitDiagramEdge[];
   width: number;
