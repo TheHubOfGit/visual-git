@@ -346,6 +346,30 @@ button {
   padding: 18px;
 }
 
+.diagram-lane-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 40px;
+  min-width: 100%;
+  margin-bottom: -40px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82));
+  backdrop-filter: blur(6px);
+}
+
+.diagram-lane-title {
+  position: absolute;
+  top: 0;
+  overflow: hidden;
+  padding: 10px 14px 8px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .diagram-svg {
   display: block;
   min-width: 100%;
@@ -356,13 +380,6 @@ button {
   fill: rgba(244, 245, 241, 0.7);
   stroke: rgba(217, 221, 211, 0.88);
   stroke-dasharray: 5 5;
-}
-
-.diagram-lane text {
-  fill: var(--muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  font-weight: 800;
 }
 
 .diagram-edge {
