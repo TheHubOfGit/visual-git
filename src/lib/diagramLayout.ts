@@ -33,15 +33,6 @@ function directLaneName(commit: GitCommit): string | undefined {
   return undefined;
 }
 
-function laneGroupRank(name: string): number {
-  if (name === "main") return 0;
-  if (name.startsWith("feature/")) return 1;
-  if (name.startsWith("hotfix/")) return 2;
-  if (name.startsWith("release/")) return 3;
-  if (name.startsWith("experiment/")) return 4;
-  return 5;
-}
-
 function commitTime(commit: GitCommit): number {
   const parsed = Date.parse(commit.date);
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
@@ -81,8 +72,8 @@ function inferLaneAssignments(commits: GitCommit[]) {
 
   const laneNames = Array.from(laneStats.values())
     .sort((left, right) => {
-      const groupDiff = laneGroupRank(left.name) - laneGroupRank(right.name);
-      if (groupDiff !== 0) return groupDiff;
+      if (left.name === "main") return -1;
+      if (right.name === "main") return 1;
       const timeDiff = left.earliestTime - right.earliestTime;
       if (timeDiff !== 0) return timeDiff;
       return left.name.localeCompare(right.name);

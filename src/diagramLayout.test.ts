@@ -100,7 +100,7 @@ describe("layoutCommitDiagram", () => {
     expect(featureWork?.column).toBe(diagram.lanes.find((lane) => lane.name === "feature/example")?.column);
   });
 
-  it("orders lanes by type and then oldest visible commit date within each type", () => {
+  it("orders lanes by absolute oldest visible commit date after main", () => {
     const branchOrderCommits: GitCommit[] = [
       {
         hash: "head",
@@ -186,10 +186,10 @@ describe("layoutCommitDiagram", () => {
     expect(diagram.lanes.map((lane) => lane.name)).toEqual([
       "main",
       "feature/older",
-      "feature/newer",
-      "hotfix/patch",
+      "experiment/spike",
       "release/candidate",
-      "experiment/spike"
+      "hotfix/patch",
+      "feature/newer"
     ]);
   });
 });
