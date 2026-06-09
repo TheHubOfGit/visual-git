@@ -297,7 +297,7 @@ button {
 }
 
 .ref-list,
-.commit-refs {
+.diagram-node-refs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -308,7 +308,7 @@ button {
 }
 
 .ref-list span,
-.commit-refs span {
+.diagram-node-refs span {
   max-width: 100%;
   padding: 3px 7px;
   border-radius: 999px;
@@ -339,94 +339,89 @@ button {
   font-weight: 760;
 }
 
-.graph-scroll {
-  position: relative;
+.diagram-scroll {
   height: calc(100vh - 190px);
   min-height: 560px;
   overflow: auto;
-  padding: 12px;
+  padding: 18px;
 }
 
-.graph-svg {
-  position: absolute;
-  inset: 12px auto auto 12px;
+.diagram-svg {
+  display: block;
+  min-width: 100%;
   overflow: visible;
 }
 
-.edge {
+.diagram-edge {
   fill: none;
-  stroke: #8fa09b;
+  stroke: #778985;
+  stroke-linecap: round;
   stroke-width: 2.2;
 }
 
-.edge-merge {
+.diagram-edge.merge {
   stroke: var(--gold);
 }
 
-.node {
-  fill: #fff;
+.arrow-head {
+  fill: #778985;
+}
+
+.arrow-head.merge {
+  fill: var(--gold);
+}
+
+.diagram-node rect {
+  fill: #fbfcf9;
+  stroke: var(--border);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 8px 18px rgba(27, 31, 26, 0.08));
+}
+
+.diagram-node.merge rect {
+  stroke: rgba(197, 139, 34, 0.58);
+}
+
+.diagram-node.selected rect {
+  fill: #ffffff;
   stroke: var(--accent);
-  stroke-width: 3;
+  stroke-width: 2.4;
 }
 
-.node.selected {
-  fill: var(--accent);
-  stroke: var(--panel-strong);
-}
-
-.row-overlay {
-  position: relative;
-  min-width: 520px;
-}
-
-.commit-row {
-  position: absolute;
-  left: 0;
+.diagram-node-button {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(140px, auto) minmax(0, auto);
-  gap: 12px;
-  align-items: center;
+  align-content: center;
+  gap: 5px;
   width: 100%;
-  min-height: 44px;
-  padding: 7px 10px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  height: 100%;
+  padding: 10px 12px;
+  border: 0;
   background: transparent;
   color: var(--text);
   text-align: left;
 }
 
-svg .commit-row {
-  display: none;
-}
-
-.commit-row:hover,
-.commit-row.selected {
-  border-color: var(--border);
-  background: #fbfcf9;
-}
-
-.commit-row.selected {
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.commit-subject {
+.diagram-node-title {
   overflow: hidden;
-  font-weight: 760;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.16;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.commit-meta {
+.diagram-node-meta {
+  overflow: hidden;
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: 11px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.commit-refs {
-  justify-content: flex-end;
+.diagram-node-refs {
   overflow: hidden;
+  flex-wrap: nowrap;
 }
 
 .empty-state {
@@ -461,29 +456,11 @@ svg .commit-row {
     gap: 12px;
   }
 
-  .graph-scroll {
+  .diagram-scroll {
     height: 620px;
   }
 
-  .row-overlay,
-  .commit-row {
-    min-width: 0;
-  }
-
-  .commit-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-    min-height: 50px;
-  }
-
-  .commit-refs {
-    display: none;
-  }
-
-  .commit-subject,
-  .commit-meta {
-    overflow: visible;
-    text-overflow: clip;
+  .diagram-node-title {
     white-space: normal;
   }
 }
