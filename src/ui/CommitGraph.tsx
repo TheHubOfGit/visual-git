@@ -1,4 +1,5 @@
-import type { GitGraph } from "../lib/types";
+import { layoutCommitDiagram, diagramNodeMetrics } from "../lib/diagramLayout";
+import type { GitDiagramEdge, GitGraph } from "../lib/types";
 
 type CommitGraphProps = {
   graph: GitGraph;
@@ -6,71 +7,68 @@ type CommitGraphProps = {
   onSelect: (hash: string) => void;
 };
 
-const laneWidth = 34;
-const rowHeight = 54;
-const topPadding = 28;
-const leftPadding = 30;
-
-function edgePath(edge: GitGraph["edges"][number]) {
-  const x1 = leftPadding + edge.fromLane * laneWidth;
-  const x2 = leftPadding + edge.toLane * laneWidth;
-  const y1 = topPadding + edge.fromRow * rowHeight;
-  const y2 = topPadding + edge.toRow * rowHeight;
-  const midY = y1 + Math.max(18, (y2 - y1) / 2);
-  return `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+function edgePath(edge: GitDiagramEdge) {
+  const midY = edge.fromY + Math.max(34, (edge.toY - edge.fromY) / 2);
+  return `M ${edge.fromX} ${edge.fromY} C ${edge.fromX} ${midY}, ${edge.toX} ${midY}, ${edge.toX} ${edge.toY}`;
 }
 
 export function CommitGraph({ graph, selectedHash, onSelect }: CommitGraphProps) {
-  const graphWidth = Math.max(96, leftPadding * 2 + graph.lanes * laneWidth);
-  const graphHeight = Math.max(160, topPadding * 2 + graph.rows.length * rowHeight);
-  const visibleHashes = new Set(graph.rows.map((row) => row.hash));
-  const visibleEdges = graph.edges.filter((edge) => visibleHashes.has(edge.from) && visibleHashes.has(edge.to));
+  const diagram = layoutCommitDiagram(graph.rows);
+  const { width: nodeWidth, height: nodeHeight } = diagramNodeMetrics;
 
   return (
-    <section className="graph-panel" aria-label="Commit graph">
+    <section className="graph-panel" aria-label="Commit node diagram">
       <div className="graph-header">
-        <span>Graph</span>
-        <span>{graph.rows.length} visible</span>
+        <span>Node diagram</span>
+        <span>{diagram.nodes.length} visible</span>
       </div>
-      <div className="graph-scroll">
-        <svg className="graph-svg" width={graphWidth} height={graphHeight} role="img" aria-label="Git commit graph">
-          {visibleEdges.map((edge) => (
-            <path key={`${edge.from}-${edge.to}`} d={edgePath(edge)} className={edge.fromLane === edge.toLane ? "edge" : "edge edge-merge"} />
+      <div className="diagram-scroll">
+        <svg className="diagram-svg" width={diagram.width} height={diagram.height} role="img" aria-label="Mermaid-style Git commit node diagram">
+          <defs>
+            <marker id="arrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
+              <path d="M 0 0 L 8 4 L 0 8 z" className="arrow-head" />
+            </marker>
+            <marker id="arrowMerge" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
+              <path d="M 0 0 L 8 4 L 0 8 z" className="arrow-head merge" />
+            </marker>
+          </defs>
+          {diagram.edges.map((edge) => (
+            <path
+              key={`${edge.from}-${edge.to}`}
+              d={edgePath(edge)}
+              className={edge.merge ? "diagram-edge merge" : "diagram-edge"}
+              markerEnd={edge.merge ? "url(#arrowMerge)" : "url(#arrow)"}
+            />
           ))}
-          {graph.rows.map((row) => {
-            const selected = row.hash === selectedHash;
-            const cx = leftPadding + row.lane * laneWidth;
-            const cy = topPadding + row.row * rowHeight;
+          {diagram.nodes.map((node) => {
+            const selected = node.hash === selectedHash;
+            const isMerge = node.parents.length > 1;
             return (
-              <g key={row.hash}>
-                <circle className={`node ${selected ? "selected" : ""}`} cx={cx} cy={cy} r={selected ? 7 : 5.5} />
+              <g
+                key={node.hash}
+                className={`diagram-node ${selected ? "selected" : ""} ${isMerge ? "merge" : ""}`}
+                transform={`translate(${node.x}, ${node.y})`}
+              >
+                <rect width={nodeWidth} height={nodeHeight} rx="8" />
+                <foreignObject width={nodeWidth} height={nodeHeight}>
+                  <button type="button" className="diagram-node-button" onClick={() => onSelect(node.hash)}>
+                    <span className="diagram-node-title">{node.subject}</span>
+                    <span className="diagram-node-meta">
+                      {node.shortHash} · {node.authorName}
+                    </span>
+                    {node.refs.length ? (
+                      <span className="diagram-node-refs">
+                        {node.refs.slice(0, 2).map((ref) => (
+                          <span key={ref}>{ref}</span>
+                        ))}
+                      </span>
+                    ) : null}
+                  </button>
+                </foreignObject>
               </g>
             );
           })}
         </svg>
-        <div className="row-overlay" style={{ marginLeft: graphWidth + 18, width: `calc(100% - ${graphWidth + 24}px)`, height: graphHeight }}>
-          {graph.rows.map((row) => (
-            <button
-              key={row.hash}
-              type="button"
-              className={`commit-row ${row.hash === selectedHash ? "selected" : ""}`}
-              style={{ top: topPadding + row.row * rowHeight - 22 }}
-              onClick={() => onSelect(row.hash)}
-            >
-              <span className="commit-subject">{row.subject}</span>
-              <span className="commit-meta">
-                {row.shortHash} · {row.authorName}
-              </span>
-              {row.refs.length ? (
-                <span className="commit-refs">
-                  {row.refs.slice(0, 3).map((ref) => (
-                    <span key={ref}>{ref}</span>
-                  ))}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
       </div>
     </section>
   );

@@ -30,6 +30,30 @@ export type GitGraph = {
   lanes: number;
 };
 
+export type GitDiagramNode = GitCommit & {
+  row: number;
+  column: number;
+  x: number;
+  y: number;
+};
+
+export type GitDiagramEdge = {
+  from: string;
+  to: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  merge: boolean;
+};
+
+export type GitDiagram = {
+  nodes: GitDiagramNode[];
+  edges: GitDiagramEdge[];
+  width: number;
+  height: number;
+};
+
 export type GitStatusFile = {
   path: string;
   index: string;
