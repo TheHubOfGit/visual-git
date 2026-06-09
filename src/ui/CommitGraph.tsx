@@ -23,6 +23,13 @@ export function CommitGraph({ graph, selectedHash, onSelect }: CommitGraphProps)
         <span>{diagram.nodes.length} visible</span>
       </div>
       <div className="diagram-scroll">
+        <div className="diagram-lane-header" style={{ width: diagram.width }}>
+          {diagram.lanes.map((lane) => (
+            <div key={lane.name} className="diagram-lane-title" style={{ left: lane.x, width: lane.width }}>
+              {lane.name}
+            </div>
+          ))}
+        </div>
         <svg className="diagram-svg" width={diagram.width} height={diagram.height} role="img" aria-label="Mermaid-style Git commit node diagram">
           <defs>
             <marker id="arrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
@@ -35,9 +42,6 @@ export function CommitGraph({ graph, selectedHash, onSelect }: CommitGraphProps)
           {diagram.lanes.map((lane) => (
             <g key={lane.name} className="diagram-lane">
               <rect x={lane.x} y="10" width={lane.width} height={diagram.height - 20} rx="8" />
-              <text x={lane.x + 14} y="36">
-                {lane.name}
-              </text>
             </g>
           ))}
           {diagram.edges.map((edge) => (
