@@ -53,6 +53,7 @@ export type GitDiagramEdge = {
   toX: number;
   toY: number;
   merge: boolean;
+  column: number;
 };
 
 export type GitDiagram = {

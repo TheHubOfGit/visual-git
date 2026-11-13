@@ -142,7 +142,8 @@ export function layoutCommitDiagram(commits: GitCommit[]): GitDiagram {
         fromY: parent.y + nodeHeight,
         toX: node.x + nodeWidth / 2,
         toY: node.y,
-        merge: node.parents.length > 1
+        merge: node.parents.length > 1,
+        column: parent.column
       });
     }
   }
