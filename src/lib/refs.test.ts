@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { resolveRefs, tagKey } from "./refs";
-import type { GitCommit, GitRepositorySnapshot } from "./types";
+import { refClass, refLabel, resolveRefs, sortRefsForDisplay, tagKey } from "./refs";
+import type { GitCommit, GitRef, GitRepositorySnapshot } from "./types";
 
 function commit(partial: Partial<GitCommit> & Pick<GitCommit, "hash">): GitCommit {
+  const date = partial.date ?? "2026-06-09T16:00:00-04:00";
   return {
     shortHash: partial.hash.slice(0, 7),
     parents: [],
     authorName: "Demo",
     authorEmail: "demo@example.local",
-    date: "2026-06-09T16:00:00-04:00",
+    date,
+    committerDate: partial.committerDate ?? date,
     refs: [],
     subject: "subject",
     body: "",
@@ -21,10 +23,12 @@ function snapshot(partial: Partial<GitRepositorySnapshot>): GitRepositorySnapsho
     path: "/repo",
     name: "repo",
     currentBranch: "main",
+    defaultBranch: "main",
     head: "",
     remotes: [],
     status: { clean: true, files: [] },
     commits: [],
+    truncated: false,
     ...partial
   };
 }
@@ -33,8 +37,8 @@ describe("resolveRefs", () => {
   it("resolves branches that are substrings of one another to the correct commit", () => {
     const snap = snapshot({
       commits: [
-        commit({ hash: "aaa1111", refs: ["feature"] }),
-        commit({ hash: "bbb2222", refs: ["feature/older"] })
+        commit({ hash: "aaa1111", refs: [{ kind: "local", name: "feature", isCurrent: false }] }),
+        commit({ hash: "bbb2222", refs: [{ kind: "local", name: "feature/older", isCurrent: false }] })
       ]
     });
 
@@ -45,9 +49,17 @@ describe("resolveRefs", () => {
     expect(resolved.refToHash.get("feature/older")).toBe("bbb2222");
   });
 
-  it("strips the tag: prefix and keys tags separately from branches", () => {
+  it("keys tags separately from branches", () => {
     const snap = snapshot({
-      commits: [commit({ hash: "ccc3333", refs: ["tag: v1.0.0", "release"] })]
+      commits: [
+        commit({
+          hash: "ccc3333",
+          refs: [
+            { kind: "tag", name: "v1.0.0" },
+            { kind: "local", name: "release", isCurrent: false }
+          ]
+        })
+      ]
     });
 
     const resolved = resolveRefs(snap);
@@ -58,13 +70,19 @@ describe("resolveRefs", () => {
     expect(resolved.refToHash.get("release")).toBe("ccc3333");
   });
 
-  it("classifies remote refs using origin/ and the configured remotes", () => {
+  it("separates remote and local refs using structured ref kinds", () => {
     const snap = snapshot({
       remotes: ["origin", "upstream"],
       commits: [
-        commit({ hash: "ddd4444", refs: ["origin/main"] }),
-        commit({ hash: "eee5555", refs: ["upstream/dev"] }),
-        commit({ hash: "fff6666", refs: ["main"] })
+        commit({
+          hash: "ddd4444",
+          refs: [{ kind: "remote", name: "origin/main", remote: "origin", branch: "main" }]
+        }),
+        commit({
+          hash: "eee5555",
+          refs: [{ kind: "remote", name: "upstream/dev", remote: "upstream", branch: "dev" }]
+        }),
+        commit({ hash: "fff6666", refs: [{ kind: "local", name: "main", isCurrent: false }] })
       ]
     });
 
@@ -76,12 +94,12 @@ describe("resolveRefs", () => {
     expect(resolved.refToHash.get("upstream/dev")).toBe("eee5555");
   });
 
-  it("strips HEAD -> decoration and ignores a bare detached HEAD", () => {
+  it("tracks current branch and ignores bare detached HEAD in refToHash", () => {
     const snap = snapshot({
       currentBranch: "main",
       commits: [
-        commit({ hash: "1112221", refs: ["HEAD -> main"] }),
-        commit({ hash: "3334443", refs: ["HEAD"] })
+        commit({ hash: "1112221", refs: [{ kind: "local", name: "main", isCurrent: true }] }),
+        commit({ hash: "3334443", refs: [{ kind: "head", name: "HEAD" }] })
       ]
     });
 
@@ -91,5 +109,19 @@ describe("resolveRefs", () => {
     expect(resolved.refToHash.get("main")).toBe("1112221");
     expect(resolved.refToHash.has("HEAD")).toBe(false);
     expect(resolved.currentBranch).toBe("main");
+  });
+
+  it("sorts and formats refs for display badges", () => {
+    const refs: GitRef[] = [
+      { kind: "head", name: "HEAD" },
+      { kind: "remote", name: "origin/main", remote: "origin", branch: "main" },
+      { kind: "tag", name: "v1.0" },
+      { kind: "local", name: "other", isCurrent: false },
+      { kind: "local", name: "main", isCurrent: true }
+    ];
+
+    const sorted = sortRefsForDisplay(refs);
+    expect(sorted.map(refLabel)).toEqual(["main", "other", "v1.0", "origin/main", "HEAD"]);
+    expect(sorted.map(refClass)).toEqual(["ref-head", "ref-local", "ref-tag", "ref-remote", "ref-head"]);
   });
 });

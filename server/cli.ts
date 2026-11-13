@@ -133,7 +133,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const app = createApp({ staticDir: distDir });
+  const app = createApp({ staticDir: distDir, defaultRepoPath: options.repoPath });
 
   let port: number;
   try {

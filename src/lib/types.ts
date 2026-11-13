@@ -1,33 +1,27 @@
+/**
+ * A ref decorating a commit, classified from git's fully-qualified names
+ * (`refs/heads/…`, `refs/remotes/…`, `refs/tags/…`), so the UI never has to
+ * guess from string prefixes.
+ */
+export type GitRef =
+  | { kind: "local"; name: string; isCurrent: boolean }
+  | { kind: "remote"; name: string; remote: string; branch: string }
+  | { kind: "tag"; name: string }
+  | { kind: "head"; name: "HEAD" };
+
 export type GitCommit = {
   hash: string;
   shortHash: string;
   parents: string[];
   authorName: string;
   authorEmail: string;
+  /** Author date (ISO 8601). Shown to people. */
   date: string;
-  refs: string[];
+  /** Committer date (ISO 8601). Used for ordering, since rebases keep the author date. */
+  committerDate: string;
+  refs: GitRef[];
   subject: string;
   body: string;
-};
-
-export type GitGraphRow = GitCommit & {
-  row: number;
-  lane: number;
-};
-
-export type GitGraphEdge = {
-  from: string;
-  to: string;
-  fromRow: number;
-  toRow: number;
-  fromLane: number;
-  toLane: number;
-};
-
-export type GitGraph = {
-  rows: GitGraphRow[];
-  edges: GitGraphEdge[];
-  lanes: number;
 };
 
 export type GitDiagramNode = GitCommit & {
@@ -43,6 +37,8 @@ export type GitDiagramLane = {
   column: number;
   x: number;
   width: number;
+  /** Horizontal centre of the lane's rail, in diagram coordinates. */
+  centerX: number;
 };
 
 export type GitDiagramEdge = {
@@ -74,6 +70,8 @@ export type GitRepositorySnapshot = {
   path: string;
   name: string;
   currentBranch: string;
+  /** The repository's trunk (origin/HEAD, else main/master/…, else the current branch). */
+  defaultBranch: string;
   head: string;
   remotes: string[];
   status: {
@@ -81,4 +79,52 @@ export type GitRepositorySnapshot = {
     files: GitStatusFile[];
   };
   commits: GitCommit[];
+  /** True when more history exists beyond the loaded `commits`. */
+  truncated: boolean;
+};
+
+export type GitChangeStatus = "A" | "M" | "D" | "R" | "C" | "T" | "U" | "X";
+
+export type GitChangedFile = {
+  path: string;
+  /** Previous path for renames and copies. */
+  oldPath?: string;
+  status: GitChangeStatus;
+  /** null for binary files. */
+  additions: number | null;
+  deletions: number | null;
+};
+
+export type GitCommitDetails = {
+  hash: string;
+  /** The commit the changes are compared against (first parent), or null for a root commit. */
+  base: string | null;
+  files: GitChangedFile[];
+};
+
+export type GitFileDiff = {
+  patch: string;
+  truncated: boolean;
+};
+
+export type GitBranchComparison = {
+  base: string;
+  head: string;
+  mergeBase: string | null;
+  aheadCount: number;
+  behindCount: number;
+  aheadCommits: string[];
+  behindCommits: string[];
+  files: GitChangedFile[];
+};
+
+export type DirectoryEntry = {
+  name: string;
+  path: string;
+  isGitRepo: boolean;
+};
+
+export type AppConfig = {
+  /** Repository the server was launched for (CLI argument or working directory), if it is a Git repo. */
+  defaultRepoPath: string | null;
 };

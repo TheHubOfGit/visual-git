@@ -1,4 +1,4 @@
-import type { GitRepositorySnapshot } from "./types";
+import type { GitRef, GitRepositorySnapshot } from "./types";
 
 /**
  * Categorized, exactly-resolvable view of a repository's refs.
@@ -17,16 +17,28 @@ export type ResolvedRefs = {
   refToHash: Map<string, string>;
 };
 
-const HEAD_PREFIX = "HEAD -> ";
-const TAG_PREFIX = "tag: ";
-
 export function tagKey(name: string): string {
   return `tag:${name}`;
 }
 
-function isRemoteRef(ref: string, remotes: string[]): boolean {
-  if (ref.startsWith("origin/")) return true;
-  return remotes.some((remote) => ref.startsWith(`${remote}/`));
+/** Short display label for a ref badge. */
+export function refLabel(ref: GitRef): string {
+  return ref.name;
+}
+
+/** CSS modifier for a ref badge. */
+export function refClass(ref: GitRef): string {
+  if (ref.kind === "head" || (ref.kind === "local" && ref.isCurrent)) return "ref-head";
+  if (ref.kind === "tag") return "ref-tag";
+  if (ref.kind === "remote") return "ref-remote";
+  return "ref-local";
+}
+
+/** Badge order: current branch, other locals, tags, remotes, detached HEAD. */
+export function sortRefsForDisplay(refs: GitRef[]): GitRef[] {
+  const rank = (ref: GitRef) =>
+    ref.kind === "local" ? (ref.isCurrent ? 0 : 1) : ref.kind === "tag" ? 2 : ref.kind === "remote" ? 3 : 4;
+  return [...refs].sort((left, right) => rank(left) - rank(right));
 }
 
 /**
@@ -40,30 +52,17 @@ export function resolveRefs(snapshot: GitRepositorySnapshot): ResolvedRefs {
   const refToHash = new Map<string, string>();
 
   for (const commit of snapshot.commits) {
-    for (const rawRef of commit.refs) {
-      const ref = rawRef.trim();
-      if (!ref) continue;
-
-      if (ref.startsWith(TAG_PREFIX)) {
-        const name = ref.slice(TAG_PREFIX.length).trim();
-        if (!name) continue;
-        tags.add(name);
-        refToHash.set(tagKey(name), commit.hash);
-        continue;
+    for (const ref of commit.refs) {
+      if (ref.kind === "tag") {
+        tags.add(ref.name);
+        refToHash.set(tagKey(ref.name), commit.hash);
+      } else if (ref.kind === "remote") {
+        remote.add(ref.name);
+        refToHash.set(ref.name, commit.hash);
+      } else if (ref.kind === "local") {
+        local.add(ref.name);
+        refToHash.set(ref.name, commit.hash);
       }
-
-      // Strip a leading "HEAD -> " (current branch decoration).
-      const name = ref.startsWith(HEAD_PREFIX) ? ref.slice(HEAD_PREFIX.length).trim() : ref;
-
-      // A bare detached HEAD carries no branch identity.
-      if (!name || name === "HEAD") continue;
-
-      if (isRemoteRef(name, snapshot.remotes)) {
-        remote.add(name);
-      } else {
-        local.add(name);
-      }
-      refToHash.set(name, commit.hash);
     }
   }
 

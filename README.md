@@ -55,12 +55,14 @@ The app reads repository data through the local `git` CLI and does not write to 
 
 ## What It Shows
 
-- Real commits from `git log --all --topo-order --date-order`
-- Branch and tag decorations
-- Merge edges and graph lanes
-- Current branch, HEAD, working-tree status, and changed-file count
-- Commit details and filtering
-- Light and dark themes, collapsible sidebar, and zoom / fit-to-view controls
+- Top-down topological commit diagram from local branches, remote branches, tags, and `HEAD`
+- Automatic default-branch detection and structured ref badges
+- Per-commit changed files with `+/-` counts and inline unified diff viewer
+- Working-tree status and working-copy file diffs
+- Branch comparison (`base...head` ahead/behind counts, graph highlighting, and file diffs)
+- Cards and Compact density views, virtualized scrolling, interactive minimap, and zoom / fit controls
+- Live `.git` watching for automatic updates, folder autocomplete, search match stepping, keyboard navigation (`j`/`k`/`p`/`/`/`d`), and shareable `?path=&commit=` URLs
+- Light and dark themes with a collapsible sidebar
 
 ## Scripts
 
