@@ -1,8 +1,11 @@
 import type {
   AppConfig,
+  CommitIdentity,
   DirectoryEntry,
+  DirectoryListing,
   GitBranchComparison,
   GitCommitDetails,
+  GitActionResult,
   GitFileDiff,
   GitRepositorySnapshot
 } from "./lib/types";
@@ -25,9 +28,10 @@ async function postJson<T>(url: string, body: unknown, fallbackError: string, si
 export async function loadConfig(): Promise<AppConfig> {
   const response = await fetch("/api/config");
   if (!response.ok) {
-    return { defaultRepoPath: null };
+    return { defaultRepoPath: null, readOnly: false };
   }
-  return (await response.json()) as AppConfig;
+  const data = (await response.json()) as Partial<AppConfig>;
+  return { defaultRepoPath: data.defaultRepoPath ?? null, readOnly: Boolean(data.readOnly) };
 }
 
 export function loadRepository(path: string, maxCount = 300): Promise<GitRepositorySnapshot> {
@@ -108,4 +112,36 @@ export async function suggestDirectories(prefix: string, signal?: AbortSignal): 
     signal
   );
   return data.entries;
+}
+
+function action(route: string, body: unknown): Promise<GitActionResult> {
+  return postJson<GitActionResult>(`/api/actions/${route}`, body, "Git could not do that.");
+}
+
+export const stageFiles = (path: string, files: string[]) => action("stage", { path, files });
+export const unstageFiles = (path: string, files: string[]) => action("unstage", { path, files });
+export const commitStaged = (path: string, message: string) => action("commit", { path, message });
+export const switchBranch = (path: string, branch: string) => action("switch", { path, branch });
+export const createBranch = (path: string, name: string, startPoint?: string) =>
+  action("create-branch", { path, name, startPoint });
+
+export function browseFolder(path?: string, showHidden = false, signal?: AbortSignal): Promise<DirectoryListing> {
+  return postJson<DirectoryListing>("/api/browse", { path, showHidden }, "Unable to open that folder.", signal);
+}
+
+export async function loadIdentity(repoPath?: string | null): Promise<CommitIdentity> {
+  const query = repoPath ? `?path=${encodeURIComponent(repoPath)}` : "";
+  const response = await fetch(`/api/identity${query}`);
+  if (!response.ok) throw new Error("Unable to read your name and email.");
+  return (await response.json()) as CommitIdentity;
+}
+
+export type IdentityResult = GitActionResult & { identity: CommitIdentity };
+
+export function saveIdentity(input: { name: string; email: string; scope: "global" | "project"; path?: string }): Promise<IdentityResult> {
+  return postJson<IdentityResult>("/api/identity", input, "Git could not save your name and email.");
+}
+
+export function clearProjectIdentity(path: string): Promise<IdentityResult> {
+  return postJson<IdentityResult>("/api/identity/clear", { path }, "Git could not change that setting.");
 }

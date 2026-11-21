@@ -5,7 +5,7 @@ description: Visualize, view, or explore a local Git repository's commit history
 
 # Visual Git Skill
 
-Guidance for setup, launching, and troubleshooting Visual Git, a read-only local web app that renders a local Git repository's commit graph.
+Guidance for setup, launching, and troubleshooting Visual Git, a local web app that draws a local Git repository's history as a map for Git newcomers.
 
 ## When to use this skill
 
@@ -27,7 +27,7 @@ Do **NOT** use this skill for:
 - **Entry point**: The CLI entry is `bin/visualgit.mjs` (registers the `tsx` loader, imports `server/cli.ts`). Reusable Express factory is `server/app.ts`.
 - **Query parameters**: The frontend reads `?path=<repo>` from the URL and auto-loads that repository.
 - **Port**: Default search starts at `4127` and picks the first free port.
-- **Read-only**: Reassure users it does not modify their repository.
+- **Changes only on confirmation**: Browsing never modifies the repository. The built-in actions (stage, unstage, commit, switch branch, create branch) run only when the person confirms them. `visualgit --read-only` turns them off.
 
 ## How to use it
 

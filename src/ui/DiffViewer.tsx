@@ -201,12 +201,12 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
       }}
       role="presentation"
     >
-      <div className="diff-modal" role="dialog" aria-modal="true" aria-label={`Diff for ${target.filePath}`}>
+      <div className="diff-modal" role="dialog" aria-modal="true" aria-label={`What changed in ${target.filePath}`}>
         <div className="diff-modal-header">
           <div className="diff-modal-title-group">
             <FileDiff size={16} className="diff-title-icon" />
             <div className="diff-title-texts">
-              <div className="diff-file-title font-mono">
+              <div className="diff-file-title mono">
                 {target.status && (
                   <span
                     className={`change-status-pill status-${target.status}`}
@@ -226,7 +226,7 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
               <div className="diff-subtitle-row">
                 <span>{target.subtitle}</span>
                 {(target.additions !== undefined || target.deletions !== undefined) && (
-                  <span className="diff-stat-summary font-mono">
+                  <span className="diff-stat-summary mono">
                     {target.additions !== null && target.additions !== undefined && (
                       <span className="stat-add">+{target.additions} added</span>
                     )}
@@ -240,10 +240,10 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
           </div>
 
           <div className="diff-modal-actions">
-            <div className="density-toggle" role="group" aria-label="Diff view mode">
+            <div className="segmented" role="group" aria-label="Diff view mode">
               <button
                 type="button"
-                className={`density-btn ${viewMode === "unified" ? "active" : ""}`}
+                className={`${viewMode === "unified" ? "active" : ""}`}
                 onClick={() => setViewMode("unified")}
                 title="Show changes inline"
                 aria-pressed={viewMode === "unified"}
@@ -253,7 +253,7 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
               </button>
               <button
                 type="button"
-                className={`density-btn ${viewMode === "split" ? "active" : ""}`}
+                className={`${viewMode === "split" ? "active" : ""}`}
                 onClick={() => setViewMode("split")}
                 title="Show before and after side by side"
                 aria-pressed={viewMode === "split"}
@@ -265,17 +265,17 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
 
             <button
               type="button"
-              className={`diff-action-btn ${showRawMeta ? "active" : ""}`}
+              className={`btn small ${showRawMeta ? "active" : ""}`}
               onClick={() => setShowRawMeta((prev) => !prev)}
               aria-pressed={showRawMeta}
               title="Toggle raw git patch headers"
             >
-              <span>Raw headers</span>
+              <span>Show git headers</span>
             </button>
 
             <button
               type="button"
-              className="diff-action-btn"
+              className="btn small"
               onClick={handleCopyPath}
               title="Copy file path"
               aria-label="Copy file path"
@@ -285,7 +285,7 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
             </button>
             <button
               type="button"
-              className="diff-close-btn"
+              className="icon-btn"
               onClick={onClose}
               title="Close diff (Esc)"
               aria-label="Close diff"
@@ -298,19 +298,19 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
         <div className="diff-legend-bar">
           <span className="diff-legend-item del">
             <span className="legend-swatch" />
-            Removed (Before)
+            Removed lines (before)
           </span>
           <span className="diff-legend-item add">
             <span className="legend-swatch" />
-            Added (After)
+            Added lines (after)
           </span>
         </div>
 
         <div className="diff-modal-body">
           {loading ? (
             <div className="diff-state-box">
-              <Loader2 size={20} className="spin-icon" />
-              <span>Loading diff…</span>
+              <Loader2 size={20} className="spin" />
+              <span>Loading changes…</span>
             </div>
           ) : error ? (
             <div className="diff-state-box error">
@@ -318,17 +318,17 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
             </div>
           ) : lines.length === 0 ? (
             <div className="diff-state-box">
-              <span>No textual changes in this diff (empty file or mode-only change).</span>
+              <span>No text changed here. The file may be empty, or only its permissions changed.</span>
             </div>
           ) : (
             <>
               {diff?.truncated && (
                 <div className="diff-truncated-banner">
-                  Diff output was truncated at 200 KB for responsiveness.
+                  This file is very large, so only the first 200 KB of changes are shown.
                 </div>
               )}
               {viewMode === "unified" ? (
-                <div className="diff-code-table font-mono">
+                <div className="diff-code-table mono">
                   {visibleUnifiedLines.map((line, index) => (
                     <div key={index} className={`diff-line diff-line-${line.kind}`}>
                       <span className="diff-gutter-num">{line.oldLine ?? ""}</span>
@@ -344,8 +344,8 @@ export function DiffViewer({ target, diff, loading, error, onClose }: DiffViewer
                   ))}
                 </div>
               ) : (
-                <div className="diff-split-table font-mono">
-                  <div className="diff-split-head font-sans">
+                <div className="diff-split-table mono">
+                  <div className="diff-split-head">
                     <span>Before</span>
                     <span>After</span>
                   </div>

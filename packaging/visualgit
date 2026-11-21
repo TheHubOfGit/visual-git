@@ -1,0 +1,24 @@
+#!/bin/sh
+# Visual Git launcher for macOS and Linux. Works from any folder, no installation needed.
+# Uses the private copy of Node under runtime/ when the installer put one there.
+self="$0"
+while [ -L "$self" ]; do
+  link=$(readlink "$self")
+  case "$link" in
+    /*) self="$link" ;;
+    *) self="$(dirname "$self")/$link" ;;
+  esac
+done
+VG_HOME=$(cd "$(dirname "$self")" && pwd)
+
+if [ -x "$VG_HOME/runtime/node/bin/node" ]; then
+  VG_NODE="$VG_HOME/runtime/node/bin/node"
+elif command -v node >/dev/null 2>&1; then
+  VG_NODE=node
+else
+  echo "Visual Git needs Node.js and could not find it." >&2
+  echo "Run: sh \"$VG_HOME/install.sh\"   (it sets one up in your home folder, no sudo needed)" >&2
+  exit 1
+fi
+
+exec "$VG_NODE" "$VG_HOME/app/build/cli.mjs" "$@"

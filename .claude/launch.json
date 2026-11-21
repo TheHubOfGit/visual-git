@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "visual-git-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "PORT=4127 npx tsx watch server/index.ts & exec npx vite --host 127.0.0.1 --port 5173 --strictPort"],
+      "port": 5173
+    }
+  ]
+}

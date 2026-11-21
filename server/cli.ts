@@ -11,23 +11,34 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(here, "..");
 const distDir = path.join(projectRoot, "dist");
 
+declare const __VISUAL_GIT_VERSION__: string | undefined;
+const version = typeof __VISUAL_GIT_VERSION__ === "string" ? __VISUAL_GIT_VERSION__ : "dev";
+
 type CliOptions = {
   repoPath: string;
+  /** True when the person named a folder instead of relying on the current one. */
+  explicitPath: boolean;
   port?: number;
   open: boolean;
   help: boolean;
+  readOnly: boolean;
 };
 
 function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = { repoPath: process.cwd(), open: true, help: false };
+  const options: CliOptions = { repoPath: process.cwd(), explicitPath: false, open: true, help: false, readOnly: false };
   const positionals: string[] = [];
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "-h" || arg === "--help") {
       options.help = true;
+    } else if (arg === "-v" || arg === "--version") {
+      console.log(version);
+      process.exit(0);
     } else if (arg === "--no-open") {
       options.open = false;
+    } else if (arg === "--read-only") {
+      options.readOnly = true;
     } else if (arg === "-p" || arg === "--port") {
       const value = argv[++i];
       const parsed = Number(value);
@@ -50,6 +61,7 @@ function parseArgs(argv: string[]): CliOptions {
 
   if (positionals[0]) {
     options.repoPath = path.resolve(positionals[0]);
+    options.explicitPath = true;
   }
   return options;
 }
@@ -66,6 +78,8 @@ Arguments:
 Options:
   -p, --port <n>    Port to listen on (default: first free port from 4127)
       --no-open     Do not open the browser automatically
+      --read-only   Turn off every action that changes the repository
+  -v, --version     Print the version
   -h, --help        Show this help
 `);
 }
@@ -100,9 +114,10 @@ async function findPort(preferred?: number): Promise<number> {
 }
 
 async function openBrowser(url: string): Promise<void> {
+  // On Windows, avoid `cmd /c start`: cmd would try to expand the %XX escapes in the URL.
   const command =
-    process.platform === "darwin" ? "open" : process.platform === "win32" ? "cmd" : "xdg-open";
-  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+    process.platform === "darwin" ? "open" : process.platform === "win32" ? "rundll32" : "xdg-open";
+  const args = process.platform === "win32" ? ["url.dll,FileProtocolHandler", url] : [url];
   try {
     await execFileAsync(command, args, { timeout: 5000 });
   } catch {
@@ -126,14 +141,18 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (!(await isGitRepository(options.repoPath))) {
+  // Started somewhere that is not a project (for example from a desktop
+  // shortcut): open the welcome screen instead of refusing to start.
+  const isRepo = await isGitRepository(options.repoPath);
+  if (!isRepo && options.explicitPath) {
     console.error(`Error: ${options.repoPath} is not a Git repository.`);
-    console.error("Pass a path to a repository, or run inside one.");
+    console.error("Pass a path to a repository, or run without a path and pick a folder in the browser.");
     process.exitCode = 1;
     return;
   }
+  const repoPath = isRepo ? options.repoPath : null;
 
-  const app = createApp({ staticDir: distDir, defaultRepoPath: options.repoPath });
+  const app = createApp({ staticDir: distDir, defaultRepoPath: repoPath, readOnly: options.readOnly });
 
   let port: number;
   try {
@@ -146,9 +165,9 @@ async function main(): Promise<void> {
 
   const server = app.listen(port, "127.0.0.1", () => {
     const actualPort = (server.address() as { port: number }).port;
-    const url = `http://127.0.0.1:${actualPort}/?path=${encodeURIComponent(options.repoPath)}`;
+    const url = `http://127.0.0.1:${actualPort}/${repoPath ? `?path=${encodeURIComponent(repoPath)}` : ""}`;
     console.log(`\n  Visual Git is running.\n`);
-    console.log(`  Repository:  ${options.repoPath}`);
+    console.log(`  Repository:  ${repoPath ?? "(none yet; pick a folder in the browser)"}`);
     console.log(`  Open:        ${url}\n`);
     console.log(`  Press Ctrl+C to stop.\n`);
     if (options.open) void openBrowser(url);

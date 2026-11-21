@@ -144,8 +144,8 @@ describe("layoutCommitDiagram", () => {
     expect(mainWork?.column).toBe(0);
     expect(featureWork?.column).toBeGreaterThan(0);
     expect(root?.column).toBe(0);
-    expect(diagram.width).toBeGreaterThan(600);
-    expect(diagram.height).toBeGreaterThan(500);
+    expect(featureWork!.x).toBeGreaterThan(mainWork!.x);
+    expect(diagram.railWidth).toBeGreaterThan(featureWork!.x);
   });
 
   it("uses the repository's defaultBranch instead of creating an empty main lane", () => {
@@ -303,5 +303,48 @@ describe("layoutCommitDiagram", () => {
       "hotfix/patch",
       "feature/newer"
     ]);
+  });
+});
+
+describe("rail layout extras", () => {
+  const day = (d: number, h: number) => `2026-06-${String(d).padStart(2, "0")}T${String(h).padStart(2, "0")}:00:00`;
+
+  it("reuses a track once the branch that used it has merged", () => {
+    const history: GitCommit[] = [
+      makeCommit({ hash: "m4", parents: ["m3", "b1"], date: day(5, 10), committerDate: day(5, 10), refs: [{ kind: "local", name: "main", isCurrent: true }], subject: "Merge branch 'two'" }),
+      makeCommit({ hash: "b1", parents: ["m3"], date: day(4, 10), committerDate: day(4, 10) }),
+      makeCommit({ hash: "m3", parents: ["m2"], date: day(3, 15), committerDate: day(3, 15) }),
+      makeCommit({ hash: "m2", parents: ["m1", "a1"], date: day(3, 10), committerDate: day(3, 10), subject: "Merge branch 'one'" }),
+      makeCommit({ hash: "a1", parents: ["m1"], date: day(2, 10), committerDate: day(2, 10) }),
+      makeCommit({ hash: "m1", parents: [], date: day(1, 10), committerDate: day(1, 10) })
+    ];
+    const diagram = layoutCommitDiagram(history);
+    const one = diagram.lanes.find((lane) => lane.name === "one");
+    const two = diagram.lanes.find((lane) => lane.name === "two");
+    expect(one?.column).toBe(1);
+    expect(two?.column).toBe(1);
+    expect(one?.colorIndex).not.toBe(two?.colorIndex);
+  });
+
+  it("adds a dated heading whenever the day changes and marks merge edges by owner", () => {
+    const diagram = layoutCommitDiagram(commits);
+    expect(diagram.dayMarkers.length).toBeGreaterThanOrEqual(1);
+    const mergeIn = diagram.edges.find((edge) => edge.from === "feature-work" && edge.to === "merge-two");
+    expect(mergeIn).toMatchObject({ secondary: true, bend: "end", laneName: "feature/example" });
+    const branchOff = diagram.edges.find((edge) => edge.to === "feature-work");
+    expect(branchOff).toMatchObject({ secondary: false, bend: "start", laneName: "feature/example" });
+  });
+
+  it("reserves a row for uncommitted work right after the checked-out commit", () => {
+    const plain = layoutCommitDiagram(commits);
+    const withPending = layoutCommitDiagram(commits, { pendingAfter: "merge-two" });
+    const head = withPending.nodes.find((node) => node.hash === "merge-two")!;
+    expect(withPending.pending).toMatchObject({ x: head.x, fromY: head.y });
+    expect(withPending.pending!.y).toBeGreaterThan(head.y);
+    expect(withPending.height).toBeGreaterThan(plain.height);
+
+    const midHistory = layoutCommitDiagram(commits, { pendingAfter: "root" });
+    const root = midHistory.nodes.find((node) => node.hash === "root")!;
+    expect(midHistory.pending!.x).toBeGreaterThan(root.x);
   });
 });

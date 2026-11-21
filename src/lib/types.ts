@@ -28,17 +28,21 @@ export type GitDiagramNode = GitCommit & {
   row: number;
   column: number;
   laneName: string;
+  /** Stable palette slot of the node's lane (0 is the default branch). */
+  colorIndex: number;
+  /** Centre of the commit's station, in diagram coordinates. */
   x: number;
   y: number;
 };
 
 export type GitDiagramLane = {
   name: string;
+  /** Track the lane runs on. Tracks are reused once a lane has ended. */
   column: number;
+  colorIndex: number;
   x: number;
-  width: number;
-  /** Horizontal centre of the lane's rail, in diagram coordinates. */
-  centerX: number;
+  /** Newest commit on the lane. */
+  tipHash: string;
 };
 
 export type GitDiagramEdge = {
@@ -48,14 +52,40 @@ export type GitDiagramEdge = {
   fromY: number;
   toX: number;
   toY: number;
+  /** The child commit has more than one parent. */
   merge: boolean;
-  column: number;
+  /** This edge comes from a parent other than the first (the line being merged in). */
+  secondary: boolean;
+  /** Where the edge changes track: right after its parent, right before its child, or not at all. */
+  bend: "start" | "end" | "none";
+  laneName: string;
+  colorIndex: number;
+};
+
+export type GitDiagramDayMarker = {
+  key: string;
+  label: string;
+  y: number;
+};
+
+export type GitDiagramPending = {
+  x: number;
+  y: number;
+  fromX: number;
+  fromY: number;
+  colorIndex: number;
 };
 
 export type GitDiagram = {
   lanes: GitDiagramLane[];
   nodes: GitDiagramNode[];
   edges: GitDiagramEdge[];
+  dayMarkers: GitDiagramDayMarker[];
+  /** Station for uncommitted work, drawn right after the checked-out commit. */
+  pending: GitDiagramPending | null;
+  /** Width of the track area; commit labels start to its right. */
+  railWidth: number;
+  rowHeight: number;
   width: number;
   height: number;
 };
@@ -124,7 +154,43 @@ export type DirectoryEntry = {
   isGitRepo: boolean;
 };
 
+export type FolderPlace = {
+  label: string;
+  path: string;
+};
+
+export type DirectoryListing = {
+  /** Folder being shown; null means the Windows list of drives. */
+  path: string | null;
+  /** Folder one level up; "" means the Windows list of drives; null means there is nothing above. */
+  parent: string | null;
+  isGitRepo: boolean;
+  entries: DirectoryEntry[];
+  places: FolderPlace[];
+  truncated: boolean;
+};
+
+export type IdentityValues = {
+  name: string;
+  email: string;
+};
+
+export type CommitIdentity = {
+  global: IdentityValues;
+  project: (IdentityValues & { path: string }) | null;
+  effective: IdentityValues;
+};
+
 export type AppConfig = {
   /** Repository the server was launched for (CLI argument or working directory), if it is a Git repo. */
   defaultRepoPath: string | null;
+  /** True when the server refuses every action that changes a repository. */
+  readOnly: boolean;
+};
+
+export type GitActionResult = {
+  ok: true;
+  summary: string;
+  command: string;
+  hash?: string;
 };

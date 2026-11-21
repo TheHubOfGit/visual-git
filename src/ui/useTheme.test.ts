@@ -13,31 +13,28 @@ describe("useTheme", () => {
     document.documentElement.removeAttribute("data-theme");
   });
 
-  it("defaults to light and applies data-theme to <html>", () => {
+  it("defaults to the transit map and applies data-theme to <html>", () => {
     const { result } = renderHook(() => useTheme());
-    expect(result.current.theme).toBe("light");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(result.current.theme).toBe("transit");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("transit");
   });
 
-  it("persists the theme to localStorage", () => {
+  it("persists the chosen theme to localStorage", () => {
     const { result } = renderHook(() => useTheme());
-    act(() => result.current.setTheme("dark"));
-    expect(localStorage.getItem("visual-git-theme")).toBe("dark");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-  });
-
-  it("toggles between light and dark", () => {
-    const { result } = renderHook(() => useTheme());
-    act(() => result.current.toggleTheme());
-    expect(result.current.theme).toBe("dark");
-    act(() => result.current.toggleTheme());
-    expect(result.current.theme).toBe("light");
+    act(() => result.current.setTheme("logbook"));
+    expect(localStorage.getItem("visual-git-theme")).toBe("logbook");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("logbook");
   });
 
   it("restores a stored theme on init", () => {
+    localStorage.setItem("visual-git-theme", "blueprint");
+    const { result } = renderHook(() => useTheme());
+    expect(result.current.theme).toBe("blueprint");
+  });
+
+  it("maps the old light and dark settings onto the new themes", () => {
     localStorage.setItem("visual-git-theme", "dark");
     const { result } = renderHook(() => useTheme());
-    expect(result.current.theme).toBe("dark");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(result.current.theme).toBe("blueprint");
   });
 });
