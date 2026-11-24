@@ -1,4 +1,4 @@
-# Visual Git
+# <img src="packaging/visualgit.png" width="44" height="44" align="absmiddle" alt="Visual Git icon" /> Visual Git
 
 Visual Git is a local web app that draws a project's Git history as a map and explains it in plain words. It is made for people who do not know Git yet.
 
